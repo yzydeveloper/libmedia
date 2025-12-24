@@ -183,13 +183,17 @@ module.exports = (env) => {
       concatenateModules: false
     },
     entry: entry,
+    experiments: {
+      outputModule: true
+    },
     output: {
       filename: output,
       path: env.dist || outputPath,
       library: {
-        name: env.esm ? undefined : library,
-        type: libraryTarget,
-        export: env.esm ? undefined : libraryExport
+        type: 'module',
+        // name: library,
+        // type: libraryTarget,
+        // export: libraryExport
       }
     },
     module: {

@@ -71,6 +71,8 @@ import { MPEG4AudioObjectTypes } from 'avutil/codecs/aac'
 import WorkerTimer from 'common/timer/WorkerTimer'
 import { Data } from 'common/types/type'
 import { AVStreamMetadataKey } from 'avutil/AVStream'
+import isWorker from 'common/function/isWorker'
+import support from 'common/util/support'
 
 export interface MSETaskOptions extends TaskOptions {
   isLive: boolean
@@ -729,6 +731,9 @@ export default class MSEPipeline extends Pipeline {
   }
 
   private createLoop(resource: MSEResource, task: SelfTask) {
+    const inWorker = isWorker()
+    const interval = (inWorker && support.shareArrayBuffer) ? 0 : 10
+
     resource.loop = new LoopTask(() => {
 
       const canPlayBufferTime = resource.track.getBufferedDuration(task.currentTime + (getTimestamp() - task.currentTimeNTP) / 1000)
@@ -840,7 +845,7 @@ export default class MSEPipeline extends Pipeline {
       else {
         resource.loop.emptyTask()
       }
-    }, 0, 0)
+    }, 0, interval)
   }
 
   private async startMux(resource: MSEResource, task: SelfTask, startTimestamp: int64 = 0n) {
@@ -1592,6 +1597,8 @@ export default class MSEPipeline extends Pipeline {
 
       task.currentTimeNTP = getTimestamp()
       task.currentTime = seekTime
+      const pts = static_cast<int64>(Math.floor(seekTime * 1000))
+      task.stats.audioCurrentTime = pts
       task.seeking = false
 
       logger.debug(`after seek end, seekTime: ${seekTime} taskId: ${taskId}`)
@@ -1664,6 +1671,8 @@ export default class MSEPipeline extends Pipeline {
         }
       }
       task.currentTime = time
+      const pts = static_cast<int64>(Math.floor(time * 1000))
+      task.stats.audioCurrentTime = pts
       task.currentTimeNTP = getTimestamp()
     }
     else {

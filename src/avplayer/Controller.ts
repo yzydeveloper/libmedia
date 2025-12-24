@@ -156,6 +156,12 @@ export default class Controller {
     })
   }
 
+  public syncPts(pts: int64) {
+    this.videoRenderControlIPCPort.notify('syncPts', {
+      pts
+    })
+  }
+
   public getVideoRenderControlPort() {
     return this.videoRenderControlChannel.port1
   }

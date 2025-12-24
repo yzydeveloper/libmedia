@@ -567,7 +567,8 @@ export default class VideoRenderPipeline extends Pipeline {
           )
 
         if (pts < task.currentPTS) {
-          // 差值大于 5s 认为从头开始了
+          // console.log('差值大于 5s 认为从头开始了>>>','pts', pts,'task.backFrame',  task.currentPTS);
+          // 差值大于 5s 认为从头开始了，因为这里导致广告一出来就会音画不同步，播完广告也不会继续播放画面，设置了pts从头开始播放，基本就是广告从头播放认为视频也是从头播放了
           if (task.currentPTS - pts > 5000n) {
             task.masterTimer.setMasterTime(pts)
           }
@@ -664,14 +665,18 @@ export default class VideoRenderPipeline extends Pipeline {
           }
           task.currentPTS = pts
 
+          // 默认的video、audio都有自己的渲染进程，据我观察是根据帧的pts同步音视频
+          // 但是当视频使用canvas、音频使用mse，两者同步的频率不一样就会造成音视频不同步，所以在上层使用MSE时一直sync同步pts
           if (pts - task.lastNotifyPTS >= 1000n) {
             task.lastNotifyPTS = pts
             task.controlIPCPort.notify('syncPts', {
               pts
             })
+            // console.log('同步视频为当前帧：',pts,"上一帧：",task.lastNotifyPTS,'差值：',pts - task.lastNotifyPTS);
           }
           this.swap(task)
           if (task.masterTimer.getMasterTime() - pts >= 2000n) {
+            // console.log('setMasterTime',task.masterTimer.getMasterTime(),'当前帧：',pts);
             task.masterTimer.setMasterTime(pts)
           }
         }

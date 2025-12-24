@@ -514,7 +514,8 @@ function parseSegment(
         params.compatibleVersion = 3
       }
       if (Math.round(value.duration) > params.targetDuration) {
-        logger.fatal('EXTINF duration, when rounded to the nearest integer, MUST be less than or equal to the target duration')
+        logger.warn('EXTINF duration, when rounded to the nearest integer, MUST be less than or equal to the target duration')
+        break
       }
       segment.duration = value.duration
       segment.title = value.title
@@ -834,7 +835,7 @@ function parseMediaPlaylist(lines: Line[], params: Record<string, any>) {
       prefetchFound = true
       segmentStart = -1
     }
-    else if (typeof line === 'string') {
+    else if (typeof line === 'string' && !/\/video\/adjump/.test(line)) {
       // uri
       if (segmentStart === -1) {
         logger.fatal('A URI line is not preceded by any segment tags')
@@ -916,7 +917,11 @@ function addSegment(
       logger.fatal('If offset of EXT-X-BYTERANGE is not present, a previous Media Segment MUST appear in the Playlist file')
     }
   }
-  playlist.segments.push(segment)
+    // 去广告
+  if(!/\/video\/adjump/.test(segment.uri)){
+    playlist.segments.push(segment)
+  }
+  
   return [segment.discontinuitySequence, segment.key!, segment.map]
 }
 

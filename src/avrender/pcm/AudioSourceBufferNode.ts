@@ -36,7 +36,7 @@ import * as is from 'common/util/is'
 import { memcpyFromUint8Array } from 'cheap/std/memory'
 import getTimestamp from 'common/function/getTimestamp'
 
-const BUFFER_LENGTH = (os.windows || os.mac || os.linux) ? 20 : 30
+const BUFFER_LENGTH = 80
 
 export interface AudioSourceBufferNodeOptions extends AudioWorkletNodeOptions {
   isMainWorker?: boolean

@@ -31,7 +31,7 @@ import { avFree, avFreep, avMallocz } from 'avutil/util/mem'
 import * as logger from 'common/util/logger'
 import os from 'common/util/os'
 
-let BUFFER_LENGTH = (os.windows || os.mac || os.linux) ? 10 : 20
+let BUFFER_LENGTH = 80
 
 declare const currentTime: number
 

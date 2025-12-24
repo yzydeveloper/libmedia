@@ -291,7 +291,8 @@ export default class DemuxPipeline extends Pipeline {
     return 0
   }
 
-  public async openStream(taskId: string, maxProbeDuration: int32 = 3000) {
+  // 改为默认5s，测试地址：https://miaoparty-svip-qq1032285.vxr.cc/Miaoparty-1032285-c-S/Miaoparty-qq-1032285-world/a8ca25dd5f48243f7472cb0657e68184.m3u8，音频5秒后才出现
+  public async openStream(taskId: string, maxProbeDuration: int32 = 5000) {
     const task = this.tasks.get(taskId)
     if (task) {
       let ret = await task.leftIPCPort.request<int32>('open')

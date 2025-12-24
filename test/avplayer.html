@@ -255,6 +255,9 @@
       <div id="useMse">
         <el-checkbox v-model="useMse">use MSE</el-checkbox>
       </div>
+      <div id="audioMSE">
+        <el-checkbox v-model="audioMSE">enable audioMSE</el-checkbox>
+      </div>
       <div id="enableWebGPU">
         <el-checkbox v-model="enableWebGPU">enable WebGPU</el-checkbox>
       </div>
@@ -491,7 +494,7 @@
         window.CHEAP_POLYFILL_URL = document.querySelector('#cheap-polyfill').src
       }
     </script>
-    <script src="../dist/avplayer/avplayer.js"></script>
+    <!-- <script src="../dist/avplayer/avplayer.js"></script> -->
     <script src="./vue.js" crossorigin></script>
     <script src="./element-ui.js" crossorigin></script>
 
@@ -500,9 +503,10 @@
       var vConsole = new window.VConsole();
     </script> -->
 
-    <script>
-      
-      
+    <script type="module">
+      import AVPlayer from "../dist/avplayer/avplayer.js"
+      window.AVPlayer = AVPlayer
+
       let player;
       let slider;
       let urlComponent;
@@ -512,6 +516,7 @@
       let enableHardwareComponent;
       let enableWorkerComponent;
       let useMseComponent;
+      let audioMSEComponent;
       let loopComponent;
       let mediaStreamModeComponent;
       let enableWebGPUComponent;
@@ -584,8 +589,12 @@
 
       let statsTimer;
 
-      let url = ''
       let defaultVersion = '-atomic'
+      // let url = 'https://c1.7bbffvip.com/video/wozaizhongguodangnongren/20241125/index.m3u8'
+      let url = 'https://cdn7.ryplay7.com/20250115/10415_8133debf/index.m3u8'
+      // let url = 'https://c1.7bbffvip.com/video/doupocangqiongnianfan/第129集/index.m3u8'
+      // let url = 'https://c1.rrcdnbf5.com/video/wangpaiduiwangpaidierji/第14期/index.m3u8'
+      // let url = 'https://c1.7bbffvip.com/video/biedongwodenanzhujiao/第14集/index.m3u8'
 
       function onFileOpen(target) {
 
@@ -602,7 +611,7 @@
         })
       }
 
-      function loadPlayer(id) {
+      window.loadPlayer = function loadPlayer(id) {
 
         if (!AVPlayer.audioContext) {
           AVPlayer.audioContext = new AudioContext()
@@ -729,6 +738,7 @@
             checkUseMES: (streams) => {
               return useMseComponent.useMse
             },
+            audioMSE: audioMSEComponent.audioMSE,
             enableHardware: enableHardwareComponent.enableHardwareAcceleration,
             enableWebCodecs: enableWebCodecsComponent.enableWebCodecs,
             enableWebGPU: enableWebGPUComponent.enableWebGPU,
@@ -1158,14 +1168,14 @@
         }, 1000)
       }
 
-      function addVolume() {
+      window.addVolume = function addVolume() {
         player.setVolume(player.getVolume() + 0.3)
       }
-      function subVolume() {
+      window.subVolume =  function subVolume() {
         player.setVolume(player.getVolume() - 0.3)
       }
 
-      function enterFullscreen() {
+      window.enterFullscreen  = function enterFullscreen() {
         player.enterFullscreen()
       }
       function resume() {
@@ -1175,13 +1185,17 @@
         player.replay()
       }
 
-      function playPlayer() {
+      window.playPlayer=function playPlayer() {
         if (player) {
-          player.play()
+          player.play({
+                audio: true,
+                video: true,
+                subtitle: true
+              })
         }
       }
 
-      function pausePlayer() {
+      window.pausePlayer=function pausePlayer() {
         if (player) {
           player.pause()
         }
@@ -1320,7 +1334,11 @@
 
         document.querySelector('#jitterMin').textContent = stats.jitterBuffer.min
         document.querySelector('#jitterMax').textContent = stats.jitterBuffer.max
-        document.querySelector('#A_V').textContent = stats.audioCurrentTime - stats.videoCurrentTime
+        if(audioMSEComponent.audioMSE) {
+          document.querySelector('#A_V').textContent = BigInt(Math.floor(player.audio.currentTime * 1000)) - stats.videoCurrentTime
+        }else {
+          document.querySelector('#A_V').textContent = stats.audioCurrentTime - stats.videoCurrentTime
+        }
       }
       
       urlComponent = new Vue({
@@ -1346,6 +1364,15 @@
         data: function () {
           return {
             useMse: false
+          }
+        }
+      })
+
+      audioMSEComponent = new Vue({
+        el: '#audioMSE',
+        data: function () {
+          return {
+            audioMSE: false
           }
         }
       })

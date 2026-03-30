@@ -146,6 +146,9 @@ export default async (env: Env, argv: Argv): Promise<Configuration> => {
 
   let entry: string | Record<string, string> = ''
   let output = ''
+
+  // enable esm
+  env.esm = true
   let libraryTarget = env.esm ? 'module' : 'umd'
   let library = ''
   let libraryExport

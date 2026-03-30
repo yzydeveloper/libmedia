@@ -130,6 +130,10 @@ export default class Controller {
         case 'seek':
           this.observer.onMSESeek(request.params.time)
           break
+          // MSEPipeline 中向 VideoRenderPepeline 中同步时间戳
+        case 'syncPts':
+          this.videoRenderControlIPCPort.notify('syncPts', request.params)
+          break
       }
     })
 
@@ -166,6 +170,12 @@ export default class Controller {
     document.addEventListener('visibilitychange', this.onVisibilityChange)
     this.muxerControlIPCPort.notify('visibilitychange', {
       visibilityHidden: this.visibilityHidden
+    })
+  }
+
+  public syncPts(pts: int64) {
+    this.videoRenderControlIPCPort.notify('syncPts', {
+      pts
     })
   }
 

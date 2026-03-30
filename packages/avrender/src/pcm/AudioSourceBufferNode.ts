@@ -45,7 +45,7 @@ import { getHeapU8 } from '@libmedia/cheap/internal'
 
 import { avFree, avFreep, avMallocz, AVPCMBuffer } from '@libmedia/avutil'
 
-const BUFFER_LENGTH = (os.windows || os.mac || os.linux) ? 20 : 30
+const BUFFER_LENGTH = 80
 
 export interface AudioSourceBufferNodeOptions extends AudioWorkletNodeOptions {
   isMainWorker?: boolean

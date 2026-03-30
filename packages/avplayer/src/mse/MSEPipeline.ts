@@ -624,7 +624,35 @@ export default class MSEPipeline extends Pipeline {
     }
 
     if (avpacket.dts < pullQueue.lastDTS) {
-      logger.warn(`got packet with dts ${avpacket.dts}, which is earlier then the last packet(${pullQueue.lastDTS})`)
+      // logger.warn(`got packet with dts ${avpacket.dts}, which is earlier then the last packet(${pullQueue.lastDTS})`)
+      // 解决广告播放后异常问题
+      // 处理插广告导致时间戳回退：例如上一段 pts 为 287560n，下一段突然变为 1500n。
+      // 时间戳回退的帧直接丢弃，避免拉回播放时间线。
+      // 需要和 VideoRenderPipeline.ts 中一同丢弃
+      if (resource.type === 'audio') {
+        const syncPts = avRescaleQ2(pullQueue.lastDTS, addressof(avpacket.timeBase), AV_MILLI_TIME_BASE_Q)
+        task.controlIPCPort.notify('syncPts', { pts: syncPts })
+        task.avpacketPool.release(avpacket)
+        return await this.pullAVPacket(resource, task)
+      }
+      // 上面的递归拉包与下面的手动修正时间戳都可解决该问题，只是方式不同
+      // if (resource.type === 'audio') {
+      //   let step = 0n
+      //   if (avpacket.duration > 0n) {
+      //     step = avpacket.duration
+      //   }
+      //   else if (resource.codecpar.sampleRate && resource.codecpar.frameSize) {
+      //     step = avRescaleQ(
+      //       static_cast<int64>(resource.codecpar.frameSize),
+      //       { num: 1, den: resource.codecpar.sampleRate },
+      //       avpacket.timeBase
+      //     )
+      //   }
+      //   if (step <= 0n) {
+      //     step = 1n
+      //   }
+      //   avpacket.dts = pullQueue.lastDTS + step
+      // }
     }
 
     // 让 muxer 模块去根据 pts 计算 duration
@@ -1665,6 +1693,8 @@ export default class MSEPipeline extends Pipeline {
 
       task.currentTimeNTP = getTimestamp()
       task.currentTime = seekTime
+      const pts = static_cast<int64>(Math.floor(seekTime * 1000))
+      task.stats.audioCurrentTime = pts
       task.seeking = false
 
       logger.debug(`after seek end, seekTime: ${seekTime} taskId: ${taskId}`)
@@ -1737,6 +1767,8 @@ export default class MSEPipeline extends Pipeline {
         }
       }
       task.currentTime = time
+      const pts = static_cast<int64>(Math.floor(time * 1000))
+      task.stats.audioCurrentTime = pts
       task.currentTimeNTP = getTimestamp()
     }
     else {

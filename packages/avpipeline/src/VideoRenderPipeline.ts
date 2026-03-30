@@ -247,15 +247,25 @@ export default class VideoRenderPipeline extends Pipeline {
           const currentMaster = task.masterTimer.getMasterTime()
           const diff = Math.abs(Number(targetMaster - currentMaster))
           if (diff > 100 && task.currentPTS > 0n) {
-            if (targetMaster > currentMaster) {
+            // ++++++++++ 2026-01-17 增加 解决广告播放后异常问题
+            // Large drift: reset master clock to avoid long catch-up lag.
+            if (diff > 500) {
+              task.masterTimer.setMasterTime(targetMaster)
+              task.adjust = AdjustStatus.None
+              task.adjustDiff = 0n
+              task.lastAdjustTimestamp = 0n
+            }
+            // ++++++++++ 2026-01-17 增加 解决广告播放后异常问题
+            else if (targetMaster > currentMaster) {
               task.adjust = AdjustStatus.Accelerate
               logger.debug(`video render sync master time accelerate, targetMaster: ${targetMaster}, currentMaster: ${currentMaster}, diff: ${diff}, taskId: ${task.taskId}`)
+              task.adjustDiff = static_cast<int64>(diff)
             }
             else {
               task.adjust = AdjustStatus.Decelerate
               logger.debug(`video render sync master time decelerate, targetMaster: ${targetMaster}, currentMaster: ${currentMaster}, diff: ${diff} taskId: ${task.taskId}`)
+              task.adjustDiff = static_cast<int64>(diff)
             }
-            task.adjustDiff = static_cast<int64>(diff)
           }
           break
         }
@@ -607,7 +617,8 @@ export default class VideoRenderPipeline extends Pipeline {
           )
 
         if (pts < task.currentPTS) {
-          // 差值大于 5s 认为从头开始了
+          // console.log('差值大于 5s 认为从头开始了 >>>','pts', pts,'task.backFrame',  task.currentPTS);
+          // 差值大于 5s 认为从头开始了，因为这里导致广告一出来就会音画不同步，播完广告也不会继续播放画面，设置了 pts 从头开始播放，基本就是广告从头播放认为视频也是从头播放了
           if (task.currentPTS - pts > 5000n) {
             task.masterTimer.setMasterTime(pts)
           }
@@ -666,6 +677,14 @@ export default class VideoRenderPipeline extends Pipeline {
           }
         }
 
+        // 时间戳回退的帧直接丢弃，避免拉回播放时间线。
+        // 需要和 MSEPipeline.ts 中一同丢弃
+        if (pts < task.currentPTS) {
+          task.stats.videoFrameDropCount++
+          this.swap(task)
+          return
+        }
+
         const diff = pts - task.masterTimer.getMasterTime()
 
         if (diff <= 0) {
@@ -704,14 +723,18 @@ export default class VideoRenderPipeline extends Pipeline {
           }
           task.currentPTS = pts
 
+          // 默认的 video、audio 都有自己的渲染进程，据我观察是根据帧的 pts 同步音视频
+          // 但是当视频使用 canvas、音频使用 mse，两者同步的频率不一样就会造成音视频不同步，所以在上层使用 MSE 时一直 sync 同步 pts
           if (pts - task.lastNotifyPTS >= 1000n) {
             task.lastNotifyPTS = pts
             task.controlIPCPort.notify('syncPts', {
               pts
             })
+            // console.log('同步视频为当前帧：', pts,"上一帧：", task.lastNotifyPTS,'差值：', pts - task.lastNotifyPTS);
           }
           this.swap(task)
           if (task.masterTimer.getMasterTime() - pts >= 2000n) {
+            // console.log('setMasterTime', task.masterTimer.getMasterTime(),'当前帧：', pts);
             task.masterTimer.setMasterTime(pts)
           }
         }

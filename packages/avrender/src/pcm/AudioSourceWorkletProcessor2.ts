@@ -43,7 +43,7 @@ import {
 
 import { avFree, avFreep, avMallocz, AVPCMBuffer } from '@libmedia/avutil'
 
-let BUFFER_LENGTH = (os.windows || os.mac || os.linux) ? 10 : 20
+let BUFFER_LENGTH = 80
 
 declare const currentTime: number
 

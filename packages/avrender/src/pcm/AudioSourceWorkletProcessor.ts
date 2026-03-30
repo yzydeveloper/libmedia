@@ -37,8 +37,7 @@ import {
   type RpcMessage
 } from '@libmedia/common/network'
 
-let BUFFER_LENGTH = (os.windows || os.mac || os.linux) ? 10 : 20
-
+let BUFFER_LENGTH = 80
 declare const currentTime: number
 
 export default class AudioSourceWorkletProcessor extends AudioWorkletProcessorBase {
